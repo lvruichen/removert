@@ -1,6 +1,14 @@
 #pragma once
 
 #include "removert/RosParamServer.h"
+struct pair_hash {
+	template<class T1, class T2>
+	std::size_t operator() (const std::pair<T1, T2>& p) const {
+		auto h1 = std::hash<T1>{}(p.first);
+		auto h2 = std::hash<T2>{}(p.second);
+		return h1 ^ h2;
+	}
+};
 
 class Removerter : public RosParamServer
 {
@@ -28,6 +36,9 @@ private:
     
     std::vector<Eigen::Matrix4d> scan_poses_;
     std::vector<Eigen::Matrix4d> scan_inverse_poses_;
+
+    std::unordered_map<std::pair<int, int>, vector<int>, pair_hash> point_map_;
+
 
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_map_global_curr_;
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_scan_global_curr_;
@@ -98,7 +109,8 @@ public:
                         const std::pair<float, float> _fov, /* e.g., [vfov = 50 (upper 25, lower 25), hfov = 360] */
                         const std::pair<int, int> _rimg_size);
 
-    std::vector<int> calcDescrepancyAndParseDynamicPointIdx (const cv::Mat& _scan_rimg, const cv::Mat& _diff_rimg, const cv::Mat& _map_rimg_ptidx);
+    void calcDescrepancyAndParseDynamicPointIdx (const cv::Mat& _scan_rimg, const cv::Mat& _diff_rimg, 
+                                                const cv::Mat& _map_rimg_ptidx, std::unordered_map<int, int>& _dynamic_map);
     std::vector<int> calcDescrepancyAndParseDynamicPointIdxForEachScan( std::pair<int, int> _rimg_shape );
 
     std::vector<int> getStaticIdxFromDynamicIdx(const std::vector<int>& _dynamic_point_indexes, int _num_all_points);

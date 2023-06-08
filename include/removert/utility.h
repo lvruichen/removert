@@ -38,6 +38,7 @@
 #include <pcl/octree/octree_pointcloud_voxelcentroid.h>
 #include <pcl/filters/crop_box.h> 
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/visualization/cloud_viewer.h>
 
 #include <tf/LinearMath/Quaternion.h>
 #include <tf/transform_listener.h>
@@ -48,6 +49,7 @@
 #include <image_transport/image_transport.h>
 
 #include <vector>
+#include <unordered_map>
 #include <cmath>
 #include <set>
 #include <algorithm>
@@ -74,6 +76,8 @@ using std::ios;
 using std::cout;
 using std::cerr;
 using std::endl;
+using std::string;
+using std::vector;
 
 // struct PointXYZIS
 // {

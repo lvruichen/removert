@@ -1,4 +1,13 @@
 # *Removert*
+## What's New?
+- According to the paper, add the revert module
+- add the score function to judge the dynamic point
+- remove module remove all dynamic points belonging to a pixel, not just the nearset point.
+## Drawback
+- to many ground points are mistakenly killed
+- the parameter is to0 many and have to suit for different dataset. 
+
+<p align="center"><img src="docs/res.png" width=900></p>
 
 ## What is removert?
 - Static map construction in the wild. 

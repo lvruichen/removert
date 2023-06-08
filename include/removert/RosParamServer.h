@@ -1,3 +1,4 @@
+// 读取pose.txt，设置参数
 #pragma once
 
 #include "removert/utility.h"
