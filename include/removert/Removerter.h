@@ -109,8 +109,7 @@ public:
                         const std::pair<float, float> _fov, /* e.g., [vfov = 50 (upper 25, lower 25), hfov = 360] */
                         const std::pair<int, int> _rimg_size);
 
-    void calcDescrepancyAndParseDynamicPointIdx (const cv::Mat& _scan_rimg, const cv::Mat& _diff_rimg, 
-                                                const cv::Mat& _map_rimg_ptidx, std::unordered_map<int, int>& _dynamic_map);
+    std::vector<int> calcDescrepancyAndParseDynamicPointIdx(const cv::Mat& _scan_rimg, const cv::Mat& _diff_rimg, const cv::Mat& _map_rimg_ptidx);
     std::vector<int> calcDescrepancyAndParseDynamicPointIdxForEachScan( std::pair<int, int> _rimg_shape );
 
     std::vector<int> getStaticIdxFromDynamicIdx(const std::vector<int>& _dynamic_point_indexes, int _num_all_points);

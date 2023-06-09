@@ -5,7 +5,7 @@ removert:
   # - KITTI 03 [downsample_voxel_size: 0.05m, skips: 5, start idx: 0, end idx: 150] 
 
   # 
-  isScanFileKITTIFormat: false
+  isScanFileKITTIFormat: true
 
   # @ save option 
   saveMapPCD: false
@@ -15,8 +15,11 @@ removert:
 
   # @ sequence info (replace to your paths) 
   #   please follow the KITTI odometry dataset's scan and pose formats (i.e., make them .bin and line-by-line corresponding se3 poses composed of 12 numbers)
-  sequence_scan_dir: "/home/eric/data/haomo/0511/keyframes/"
-  sequence_pose_path: "/home/eric/data/haomo/0511/update_pose.txt"
+  sequence_scan_dir: "/home/eric/data/erasor/00/velodyne/"
+  sequence_pose_path: "/home/eric/data/erasor/00/pose.txt"
+
+  # sequence_scan_dir: "/home/eric/data/binhai/slam/velodyne/"
+  # sequence_pose_path: "/home/eric/data/binhai/slam/pose.txt"  
 
   sequence_vfov: 50 # including upper and lower fovs, for example, KITTI's HDL64E is 2 + 24.9 ~ 27 deg. (so 25 + 25 = 50 is recommended because it is enough)
   sequence_hfov: 360 # generally for targetting scanning LiDAR but a lidar having restricted hfov also just can use the 360 (because no point regions are considered in the algorithm)
@@ -49,8 +52,8 @@ removert:
   #   means the removeter runs on all scans in a specified regions of a sequence 
   #   it means we parse scans every <keyframe_gap> or <keyframe_gap_meter> meter within the idx range [start_idx, end_idx] 
   #   but for a single batch, < 100 scans are recommended for the computation speed.
-  start_idx: 100 # change this
-  end_idx: 120 # change this
+  start_idx: 0 # change this
+  end_idx: 70 # change this
 
 
   # @ auto repeat
@@ -66,10 +69,12 @@ removert:
   #     - e.g., HDL 64E of KITTI dataset -> appx 25 deg / 64 ray ~ 0.4 deg per pixel -> the magnifier ratio = 1/0.4 = 2.5
   #     - e.g., Ouster OS1-64 of MulRan dataset -> appx 45 deg / 64 ray ~ 0.7 deg per pixel -> the magnifier ratio = 1/0.7 = 1.4
   # - recommend to use the first reverting resolution's magnifier ratio should lied in 1.0 to 1.5
-  remove_resolution_list: [1.2] # for HDL 64E of KITTI dataset 
+  # remove_resolution_list: [1.2] # for HDL 128 of haomo dataset
+  remove_resolution_list: [2.5, 2.0, 1.5] # for HDL 64E of KITTI dataset
   # remove_resolution_list: [1.4, 1.1] # for Ouster OS1-64 of MulRan dataset
-  revert_resolution_list: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.15] # TODO
-
+  revert_resolution_list: [1.0, 0.9, 0.8, 0.7] # for HDL 64E of KITTI dataset
+  # revert_resolution_list: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.15] # # for HDL 128 of haomo dataset
+  
 
   # @ Removert params 
   # about density 

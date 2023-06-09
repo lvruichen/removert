@@ -188,7 +188,7 @@ std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<Point
 
     // @ points to range img 
     int num_points = _scan->points.size();
-    // #pragma omp parallel for num_threads(kNumOmpCores)
+    #pragma omp parallel for num_threads(kNumOmpCores)
     for (int pt_idx = 0; pt_idx < num_points; ++pt_idx)
     {   
         PointType this_point = _scan->points[pt_idx];
@@ -204,13 +204,13 @@ std::pair<cv::Mat, cv::Mat> Removerter::map2RangeImg(const pcl::PointCloud<Point
         int pixel_idx_col = int(std::min(std::max(std::round(kNumRimgCol * ((rad2deg(sph_point.az) + (kHFOV/float(2.0))) / (kHFOV - float(0.0)))), float(lower_bound_col_idx)), float(upper_bound_col_idx)));
 
         float curr_range = sph_point.r;
-        std::pair<int, int> _id{pixel_idx_row, pixel_idx_col};
-        if (point_map_.find(_id) == point_map_.end()) {
-            point_map_[_id] ={pt_idx};
-        }
-        else {
-            point_map_[_id].push_back(pt_idx);
-        }
+        // std::pair<int, int> _id{pixel_idx_row, pixel_idx_col};
+        // if (point_map_.find(_id) == point_map_.end()) {
+        //     point_map_[_id] ={pt_idx};
+        // }
+        // else {
+        //     point_map_[_id].push_back(pt_idx);
+        // }
         // @ Theoretically, this if-block would have race condition (i.e., this is a critical section), 
         // @ But, the resulting range image is acceptable (watching via Rviz), 
         // @      so I just naively applied omp pragma for this whole for-block (2020.10.28)
@@ -497,13 +497,12 @@ void Removerter::saveCurrentStaticAndDynamicPointCloudLocal( int _base_node_idx 
 } // saveCurrentStaticAndDynamicPointCloudLocal
 
 
-void Removerter::calcDescrepancyAndParseDynamicPointIdx
-    (const cv::Mat& _scan_rimg, const cv::Mat& _diff_rimg, 
-    const cv::Mat& _map_rimg_ptidx, std::unordered_map<int, int>& _dynamic_map)
+std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdx
+    (const cv::Mat& _scan_rimg, const cv::Mat& _diff_rimg, const cv::Mat& _map_rimg_ptidx)
 {
     int num_dyna_points {0}; // TODO: tracking the number of dynamic-assigned points and decide when to stop removing (currently just fixed iteration e.g., [2.5, 2.0, 1.5])
 
-    std::unordered_map<int, int> dynamic_point_indexes_map;
+    std::vector<int> dynamic_point_indexes;
     for (int row_idx = 0; row_idx < _diff_rimg.rows; row_idx++) {
         for (int col_idx = 0; col_idx < _diff_rimg.cols; col_idx++) {
             float this_diff = _diff_rimg.at<float>(row_idx, col_idx);
@@ -516,22 +515,15 @@ void Removerter::calcDescrepancyAndParseDynamicPointIdx
             if( this_diff < kValidDiffUpperBound // exclude no-point pixels either on scan img or map img (100 is roughly 100 meter)
                 && this_diff > adaptive_dynamic_descrepancy_threshold /* dynamic */) 
             {  // dynamic
-                vector<int> points_id = point_map_[std::pair<int, int>{row_idx, col_idx}];
-                for (int id : points_id) {
-                    float map_range = pointDistance(map_local_curr_->points[id]);
-                    if(map_range >= this_range ) {
-                        continue;
-                    }
-                     if(_dynamic_map.find(id) == _dynamic_map.end()) {
-                    _dynamic_map[id] = 1;
-                    }
-                    else {
-                        _dynamic_map[id] ++;
-                    }
-                }
+                int this_point_idx_in_global_map = _map_rimg_ptidx.at<int>(row_idx, col_idx);
+                dynamic_point_indexes.emplace_back(this_point_idx_in_global_map);
+
+                // num_dyna_points++; // TODO
             } 
         } 
     }
+
+    return dynamic_point_indexes;
 } // calcDescrepancyAndParseDynamicPointIdx
 
 
@@ -554,7 +546,7 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan( 
 {   
     std::vector<int> dynamic_point_indexes;
     // map to store dynamic point idx
-    std::unordered_map<int, int> dynamic_point_map;
+    // std::unordered_map<int, int> dynamic_point_map;
     // dynamic_point_indexes.reserve(100000);
     for(std::size_t idx_scan=0; idx_scan < scans_.size(); ++idx_scan) {            
         // curr scan 
@@ -584,8 +576,8 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan( 
 
         // parse dynamic points' indexes: rule: If a pixel value of diff_rimg is larger, scan is the further - means that pixel of submap is likely dynamic.
         // dynamic_point_map key: point id in map, value times to be seen as dynamic
-        calcDescrepancyAndParseDynamicPointIdx(scan_rimg, diff_rimg, map_rimg_ptidx, dynamic_point_map);
-        
+        std::vector<int> this_scan_dynamic_point_indexes = calcDescrepancyAndParseDynamicPointIdx(scan_rimg, diff_rimg, map_rimg_ptidx);
+        dynamic_point_indexes.insert(dynamic_point_indexes.end(), this_scan_dynamic_point_indexes.begin(), this_scan_dynamic_point_indexes.end());
 
         // visualization 
         // pubRangeImg(scan_rimg, scan_rimg_msg_, scan_rimg_msg_publisher_, kRangeColorAxis);
@@ -599,16 +591,19 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan( 
     } // for_each scan Done
 
     // remove repeated indexes
-     std::vector<int> dynamic_point_indexes_unique;
-    // cauculate the dynamic point according to equation
-    for (auto& iter : dynamic_point_map) {
-        int n_dm = iter.second;
-        int n_sm = scans_.size() - n_dm;
-        float score = 0.3 * n_sm - 0.7 * n_dm;
-        if(score < -0.1) {
-            dynamic_point_indexes_unique.push_back(iter.first);
-        }
-    }
+    // std::vector<int> dynamic_point_indexes_unique;
+    // // cauculate the dynamic point according to equation
+    // for (auto& iter : dynamic_point_map) {
+    //     int n_dm = iter.second;
+    //     int n_sm = scans_.size() - n_dm;
+    //     float score = 0.3 * n_sm - 0.7 * n_dm;
+    //     if(score < -0.1) {
+    //         dynamic_point_indexes_unique.push_back(iter.first);
+    //     }
+    // }
+    // return dynamic_point_indexes_unique;
+    std::set<int> dynamic_point_indexes_set (dynamic_point_indexes.begin(), dynamic_point_indexes.end());
+    std::vector<int> dynamic_point_indexes_unique (dynamic_point_indexes_set.begin(), dynamic_point_indexes_set.end());
     return dynamic_point_indexes_unique;
     
 } // calcDescrepancyForEachScan
@@ -934,7 +929,36 @@ void Removerter::run( void )
         vis_res.spin();
     }
 
+    // visualization all results
+    ROS_INFO_STREAM("\033[1;32m original nondown-sampling submap size: " << map_global_orig_->size() << "\033[0m"); 
+    pcl::PointCloud<PointType>::Ptr staticSubmap(new pcl::PointCloud<PointType>());
+    pcl::PointCloud<PointType>::Ptr dynamicSubmap(new pcl::PointCloud<PointType>());
+    pcl::KdTreeFLANN<PointType>::Ptr kdtree_eval;
+    kdtree_eval.reset(new pcl::KdTreeFLANN<PointType>());
+    kdtree_eval->setInputCloud(global_static_map_result);
+    for (auto& _p : map_global_orig_->points) {
+        vector<int> ind;
+        vector<float> dis;
+        kdtree_eval->radiusSearch(_p, 0.3, ind, dis);
+        if(ind.empty() == true) {
+            dynamicSubmap->push_back(_p);
+        }
+        else {
+            staticSubmap->push_back(_p);
+        }
+    }
+    // static clouds
+    ROS_INFO_STREAM("\033[1;32m static submap size: " << staticSubmap->size() << "\033[0m"); 
+    // dynamic clouds
+    ROS_INFO_STREAM("\033[1;32m dynamic submap size: " << dynamicSubmap->size() << "\033[0m"); 
+
+    pcl::visualization::PCLVisualizer vis_res2("vis_res");
+    pcl::visualization::PointCloudColorHandlerCustom<PointType> static_handler(staticSubmap, 0, 255, 0);
+    vis_res2.addPointCloud(staticSubmap, static_handler, "static");
+    pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(dynamicSubmap, 255, 0, 0);
+    vis_res2.addPointCloud(dynamicSubmap, dynamic_handler, "dynamic");
+    vis_res2.spin();
     // // scan-side removals
-    scansideRemovalForEachScanAndSaveThem();
+    // scansideRemovalForEachScanAndSaveThem();
 
 }
