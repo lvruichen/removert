@@ -921,12 +921,12 @@ void Removerter::run( void )
         revertOnce( _rv_res );
         *global_static_map_result += *map_global_curr_static_;
         global_dynamic_map_result = map_global_curr_dynamic_;
-        pcl::visualization::PCLVisualizer vis_res("vis_res");
-        pcl::visualization::PointCloudColorHandlerCustom<PointType> static_handler(global_static_map_result, 0, 255, 0);
-        vis_res.addPointCloud(global_static_map_result, static_handler, "static");
-        pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(global_dynamic_map_result, 255, 0, 0);
-        vis_res.addPointCloud(global_dynamic_map_result, dynamic_handler, "dynamic");
-        vis_res.spin();
+        // pcl::visualization::PCLVisualizer vis_res("vis_res");
+        // pcl::visualization::PointCloudColorHandlerCustom<PointType> static_handler(global_static_map_result, 0, 255, 0);
+        // vis_res.addPointCloud(global_static_map_result, static_handler, "static");
+        // pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(global_dynamic_map_result, 255, 0, 0);
+        // vis_res.addPointCloud(global_dynamic_map_result, dynamic_handler, "dynamic");
+        // vis_res.spinOnce(3);
     }
 
     // visualization all results
@@ -936,10 +936,12 @@ void Removerter::run( void )
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_eval;
     kdtree_eval.reset(new pcl::KdTreeFLANN<PointType>());
     kdtree_eval->setInputCloud(global_static_map_result);
+
     for (auto& _p : map_global_orig_->points) {
         vector<int> ind;
         vector<float> dis;
         kdtree_eval->radiusSearch(_p, 0.3, ind, dis);
+
         if(ind.empty() == true) {
             dynamicSubmap->push_back(_p);
         }
@@ -952,12 +954,99 @@ void Removerter::run( void )
     // dynamic clouds
     ROS_INFO_STREAM("\033[1;32m dynamic submap size: " << dynamicSubmap->size() << "\033[0m"); 
 
-    pcl::visualization::PCLVisualizer vis_res2("vis_res");
+    // pcl::visualization::PCLVisualizer vis_res2("vis_res");
+    // pcl::visualization::PointCloudColorHandlerCustom<PointType> static_handler(staticSubmap, 0, 255, 0);
+    // vis_res2.addPointCloud(staticSubmap, static_handler, "static");
+    // pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(dynamicSubmap, 255, 0, 0);
+    // vis_res2.addPointCloud(dynamicSubmap, dynamic_handler, "dynamic");
+    // vis_res2.spin();
+
+    // calculate PP and PR
+    std::vector<int> DYNAMIC_CLASSES = {252, 253, 254, 255, 256, 257, 258, 259};
+
+    int total_dynamic_points = 0;
+    int preserved_dynamic_points = 0;
+    int total_static_points = 0;
+    int preserved_static_points = 0;
+
+    pcl::PointCloud<PointType>::Ptr preservedDynamic(new pcl::PointCloud<PointType>());
+    pcl::PointCloud<PointType>::Ptr wrongKillStatic(new pcl::PointCloud<PointType>());
+    for (auto& _p : staticSubmap->points) {
+        uint32_t float2int      = static_cast<uint32_t>(_p.intensity);
+        uint32_t semantic_label = float2int & 0xFFFF;
+        uint32_t inst_label     = float2int >> 16;
+        bool     is_static      = true;
+        for (int class_num: DYNAMIC_CLASSES) {
+            if (semantic_label == class_num) { 
+                is_static = false;
+            }
+            // if (pointDistance(_p) < 2) {
+            //     is_static = false;
+            // }
+        }
+        if (is_static) {
+            total_static_points++;
+            preserved_static_points++;
+        }
+        else {
+            total_dynamic_points++;
+            preserved_dynamic_points++;
+            preservedDynamic->push_back(_p);
+        }
+    } 
+
+    for (auto& _p : dynamicSubmap->points) {
+        uint32_t float2int      = static_cast<uint32_t>(_p.intensity);
+        uint32_t semantic_label = float2int & 0xFFFF;
+        uint32_t inst_label     = float2int >> 16;
+        bool     is_static      = true;
+        for (int class_num: DYNAMIC_CLASSES) {
+            if (semantic_label == class_num) { 
+                is_static = false;
+            }
+            // if (pointDistance(_p) < 0.5) {
+            //     is_static = false;
+            // }
+        }
+        if (is_static) {
+            total_static_points++;
+            wrongKillStatic->push_back(_p);
+        }
+        else {
+            total_dynamic_points++;
+        }
+    }
+
+    cout << "total_static_points: " << total_static_points << endl;
+    cout << "total_dynamic_points:" << total_dynamic_points << endl;
+    cout << "preserved_static_points:" << preserved_static_points << endl;
+    cout << "preserved_dynamic_points:" << preserved_dynamic_points << endl;
+    
+    float PR = (float)preserved_static_points / (float)total_static_points;
+    float RR = 1 - (float)preserved_dynamic_points / (float)total_dynamic_points;
+
+    cout << "Precision rate: " << PR << endl;
+    cout << "Recall rate:    " << RR << endl; 
+
+    // Green
+    pcl::visualization::PCLVisualizer vis_res("vis_res");
     pcl::visualization::PointCloudColorHandlerCustom<PointType> static_handler(staticSubmap, 0, 255, 0);
-    vis_res2.addPointCloud(staticSubmap, static_handler, "static");
-    pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(dynamicSubmap, 255, 0, 0);
-    vis_res2.addPointCloud(dynamicSubmap, dynamic_handler, "dynamic");
-    vis_res2.spin();
+    vis_res.addPointCloud(staticSubmap, static_handler, "static");
+
+    // White
+    pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(dynamicSubmap, 255, 255, 255);
+    vis_res.addPointCloud(dynamicSubmap, dynamic_handler, "dynamic");
+
+    // Red
+    pcl::visualization::PointCloudColorHandlerCustom<PointType> pd_handler(preservedDynamic, 255, 0, 0);
+    vis_res.addPointCloud(preservedDynamic, pd_handler, "pd");
+
+    // Blue
+    pcl::visualization::PointCloudColorHandlerCustom<PointType> wk_handler(wrongKillStatic, 0, 0, 255);
+    vis_res.addPointCloud(wrongKillStatic, wk_handler, "wk");
+
+    vis_res.spin();
+
     // // scan-side removals
     // scansideRemovalForEachScanAndSaveThem();
 

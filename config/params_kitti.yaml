@@ -15,8 +15,8 @@ removert:
 
   # @ sequence info (replace to your paths) 
   #   please follow the KITTI odometry dataset's scan and pose formats (i.e., make them .bin and line-by-line corresponding se3 poses composed of 12 numbers)
-  sequence_scan_dir: "/home/eric/data/erasor/00/velodyne/"
-  sequence_pose_path: "/home/eric/data/erasor/00/pose.txt"
+  sequence_scan_dir: "/home/eric/data/erasor/07/velodyne/"
+  sequence_pose_path: "/home/eric/data/erasor/07/pose.txt"
 
   # sequence_scan_dir: "/home/eric/data/binhai/slam/velodyne/"
   # sequence_pose_path: "/home/eric/data/binhai/slam/pose.txt"  
@@ -53,7 +53,7 @@ removert:
   #   it means we parse scans every <keyframe_gap> or <keyframe_gap_meter> meter within the idx range [start_idx, end_idx] 
   #   but for a single batch, < 100 scans are recommended for the computation speed.
   start_idx: 0 # change this
-  end_idx: 70 # change this
+  end_idx: 95 # change this
 
 
   # @ auto repeat
@@ -78,7 +78,7 @@ removert:
 
   # @ Removert params 
   # about density 
-  downsample_voxel_size: 0.05 # user parameter but recommend to use 0.05 to make sure an enough density (this value is related to the removing resolution's expected performance)
+  downsample_voxel_size: 0.1 # user parameter but recommend to use 0.05 to make sure an enough density (this value is related to the removing resolution's expected performance)
 
   # about Static sensitivity (you need to tune these below two values, depends on the environement)
   # - if you use a raw scan 
