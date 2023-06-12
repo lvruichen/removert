@@ -1,14 +1,6 @@
 #pragma once
 
 #include "removert/RosParamServer.h"
-struct pair_hash {
-	template<class T1, class T2>
-	std::size_t operator() (const std::pair<T1, T2>& p) const {
-		auto h1 = std::hash<T1>{}(p.first);
-		auto h2 = std::hash<T2>{}(p.second);
-		return h1 ^ h2;
-	}
-};
 
 class Removerter : public RosParamServer
 {
@@ -26,6 +18,7 @@ private:
     std::vector<std::string> sequence_valid_scan_names_;
     std::vector<std::string> sequence_valid_scan_paths_;
     std::vector<pcl::PointCloud<PointType>::Ptr> scans_;
+    std::vector<pcl::PointCloud<PointType>::Ptr> scans_origin_;
     std::vector<pcl::PointCloud<PointType>::Ptr> scans_static_;
     std::vector<pcl::PointCloud<PointType>::Ptr> scans_dynamic_;
 
@@ -36,9 +29,6 @@ private:
     
     std::vector<Eigen::Matrix4d> scan_poses_;
     std::vector<Eigen::Matrix4d> scan_inverse_poses_;
-
-    std::unordered_map<std::pair<int, int>, vector<int>, pair_hash> point_map_;
-
 
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_map_global_curr_;
     pcl::KdTreeFLANN<PointType>::Ptr kdtree_scan_global_curr_;
@@ -53,8 +43,8 @@ private:
     pcl::PointCloud<PointType>::Ptr map_global_curr_static_; // the S_i
     pcl::PointCloud<PointType>::Ptr map_global_curr_dynamic_;  // the D_i
 
-    pcl::PointCloud<PointType>::Ptr map_global_accumulated_static_; // TODO, the S_i after reverted
-    pcl::PointCloud<PointType>::Ptr map_global_accumulated_dynamic_;  // TODO, the D_i after reverted 
+    pcl::PointCloud<PointType>::Ptr submap_static;
+    pcl::PointCloud<PointType>::Ptr submap_dynamic;
 
     std::vector<pcl::PointCloud<PointType>::Ptr> static_map_global_history_; // TODO
     std::vector<pcl::PointCloud<PointType>::Ptr> dynamic_map_global_history_; // TODO
@@ -78,6 +68,7 @@ public:
     void allocateMemory();
 
     void parseValidScanInfo();
+    void parseValidScanInfoBR();
     void readValidScans();
 
     void mergeScansWithinGlobalCoord( 
@@ -88,6 +79,10 @@ public:
     void makeGlobalMap();
 
     void run(void);
+
+    void batchRemoval(void);
+
+    void resetParameter(void);
 
     void removeOnce(float _res);
     void revertOnce(float _res);
@@ -120,9 +115,6 @@ public:
     void parseMapPointcloudSubsetUsingPtIdx( std::vector<int>& _point_indexes, pcl::PointCloud<PointType>::Ptr& _ptcloud_to_save );
     void parseStaticMapPointcloudUsingPtIdx( std::vector<int>& _point_indexes );
     void parseDynamicMapPointcloudUsingPtIdx( std::vector<int>& _point_indexes );
-
-    void saveCurrentStaticAndDynamicPointCloudGlobal( void );
-    void saveCurrentStaticAndDynamicPointCloudLocal( int _base_pose_idx  = 0);
 
     // void local2global(const pcl::PointCloud<PointType>::Ptr& _ptcloud_global, pcl::PointCloud<PointType>::Ptr& _ptcloud_local_to_save );
     pcl::PointCloud<PointType>::Ptr local2global(const pcl::PointCloud<PointType>::Ptr& _scan_local, int _scan_idx);

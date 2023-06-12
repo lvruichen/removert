@@ -48,7 +48,9 @@ public:
     // target region to removerting 
     int start_idx_;
     int end_idx_;
-
+    bool use_batch_removal;
+    int batch_size;
+    bool visualizationFlag;
     bool use_keyframe_gap_; 
     bool use_keyframe_meter_; 
     int keyframe_gap_;

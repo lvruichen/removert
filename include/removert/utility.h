@@ -68,6 +68,8 @@
 #include <array>
 #include <thread>
 #include <mutex>
+#include <algorithm>
+#include <random>
 
 #include <filesystem> // requires gcc version >= 8
 

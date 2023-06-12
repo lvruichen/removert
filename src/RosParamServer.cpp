@@ -143,6 +143,9 @@ RosParamServer::RosParamServer()
     // target scan index range (used in Removert.cpp)
     nh.param<int>("removert/start_idx", start_idx_, 1);
     nh.param<int>("removert/end_idx", end_idx_, 100);
+    nh.param<bool>("removert/use_batch_removal", use_batch_removal, false);
+    nh.param<int>("removert/batch_size", batch_size, 100);
+    nh.param<bool>("removert/visualizationFlag", visualizationFlag, true);
 
     nh.param<bool>("removert/use_keyframe_gap", use_keyframe_gap_, true);
     nh.param<bool>("removert/use_keyframe_meter", use_keyframe_meter_, false);
