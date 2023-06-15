@@ -130,6 +130,6 @@ public:
     void scansideRemovalForEachScanAndSaveThem(void);
 
     void saveStaticScan( int _scan_idx, const pcl::PointCloud<PointType>::Ptr& _ptcloud );
-    void saveDynamicScan( int _scan_idx, const pcl::PointCloud<PointType>::Ptr& _ptcloud );
+    // void saveDynamicScan( int _scan_idx, const pcl::PointCloud<PointType>::Ptr& _ptcloud );
 
 }; // Removerter

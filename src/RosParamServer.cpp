@@ -35,6 +35,10 @@ RosParamServer::RosParamServer()
     // parsing file paths 
     nh.param<std::string>("removert/sequence_scan_dir", sequence_scan_dir_, "/use/your/directory/having/*.bin/pcd");
     for(auto& _entry : fs::directory_iterator(sequence_scan_dir_)) {
+        string file_name = _entry.path().filename();
+        if(file_name.substr(file_name.size() - 3, 3) == "txt") {
+            continue;
+        }
         sequence_scan_names_.emplace_back(_entry.path().filename());
         sequence_scan_paths_.emplace_back(_entry.path());
     }

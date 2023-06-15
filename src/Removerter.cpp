@@ -36,7 +36,7 @@ Removerter::Removerter()
         save_pcd_directory_ = save_pcd_directory_ + "/";
     fsmkdir(save_pcd_directory_);
     scan_static_save_dir_ = save_pcd_directory_ + "scan_static"; fsmkdir(scan_static_save_dir_);
-    scan_dynamic_save_dir_ = save_pcd_directory_ + "scan_dynamic"; fsmkdir(scan_dynamic_save_dir_);
+    // scan_dynamic_save_dir_ = save_pcd_directory_ + "scan_dynamic"; fsmkdir(scan_dynamic_save_dir_);
     map_static_save_dir_ = save_pcd_directory_ + "map_static"; fsmkdir(map_static_save_dir_);
     map_dynamic_save_dir_ = save_pcd_directory_ + "map_dynamic"; fsmkdir(map_dynamic_save_dir_);
 
@@ -515,16 +515,6 @@ std::vector<int> Removerter::calcDescrepancyAndParseDynamicPointIdxForEachScan( 
         // dynamic_point_map key: point id in map, value times to be seen as dynamic
         std::vector<int> this_scan_dynamic_point_indexes = calcDescrepancyAndParseDynamicPointIdx(scan_rimg, diff_rimg, map_rimg_ptidx);
         dynamic_point_indexes.insert(dynamic_point_indexes.end(), this_scan_dynamic_point_indexes.begin(), this_scan_dynamic_point_indexes.end());
-
-        // visualization 
-        // pubRangeImg(scan_rimg, scan_rimg_msg_, scan_rimg_msg_publisher_, kRangeColorAxis);
-        // pubRangeImg(map_rimg, map_rimg_msg_, map_rimg_msg_publisher_, kRangeColorAxis);
-        // pubRangeImg(diff_rimg, diff_rimg_msg_, diff_rimg_msg_publisher_, kRangeColorAxisForDiff);
-
-        // std::pair<float, float> kRangeColorAxisForPtIdx {0.0, float(map_global_curr_->points.size())};
-        // pubRangeImg(map_rimg_ptidx, map_rimg_ptidx_msg_, map_rimg_ptidx_msg_publisher_, kRangeColorAxisForPtIdx);
-
-        // publishPointcloud2FromPCLptr(scan_publisher_, _scan);
     } // for_each scan Done
 
     // return dynamic_point_indexes_unique;
@@ -674,24 +664,6 @@ std::pair<pcl::PointCloud<PointType>::Ptr, pcl::PointCloud<PointType>::Ptr>
     pcl::PointCloud<PointType>::Ptr scan_dynamic_global (new pcl::PointCloud<PointType>); 
     for (std::size_t pt_idx = 0; pt_idx < num_points_of_a_scan; pt_idx++)
     {
-        // std::vector<int> topk_indexes_scan;
-        // std::vector<float> topk_L2dists_scan;
-        // kdtree_scan_global_curr_->nearestKSearch(scan_orig_global->points[pt_idx], kNumKnnPointsToCompare, topk_indexes_scan, topk_L2dists_scan);
-        // float sum_topknn_dists_in_scan = accumulate( topk_L2dists_scan.begin(), topk_L2dists_scan.end(), 0.0);
-        // float avg_topknn_dists_in_scan = sum_topknn_dists_in_scan / float(kNumKnnPointsToCompare);
-
-        // std::vector<int> topk_indexes_map;
-        // std::vector<float> topk_L2dists_map;
-        // kdtree_map_global_curr_->nearestKSearch(scan_orig_global->points[pt_idx], kNumKnnPointsToCompare, topk_indexes_map, topk_L2dists_map);
-        // float sum_topknn_dists_in_map = accumulate( topk_L2dists_map.begin(), topk_L2dists_map.end(), 0.0);
-        // float avg_topknn_dists_in_map = sum_topknn_dists_in_map / float(kNumKnnPointsToCompare);
-
-        // // 
-        // if ( std::abs(avg_topknn_dists_in_scan - avg_topknn_dists_in_map) < kScanKnnAndMapKnnAvgDiffThreshold) {
-        //     scan_static_global->push_back(scan_orig_global->points[pt_idx]);
-        // } else {
-        //     scan_dynamic_global->push_back(scan_orig_global->points[pt_idx]);
-        // }
         std::vector<int> topk_indexes_map;
         std::vector<float> topk_L2dists_map;
         kdtree_map_global_curr_->radiusSearch(scan_orig_global->points[pt_idx], 0.3, topk_indexes_map, topk_L2dists_map);
@@ -707,14 +679,6 @@ std::pair<pcl::PointCloud<PointType>::Ptr, pcl::PointCloud<PointType>::Ptr>
     pcl::PointCloud<PointType>::Ptr scan_static_local = global2local(scan_static_global, _scan_idx);
     pcl::PointCloud<PointType>::Ptr scan_dynamic_local = global2local(scan_dynamic_global, _scan_idx);
 
-    // ROS_INFO_STREAM("\033[1;32m The scan " << sequence_valid_scan_paths_.at(_scan_idx) << "\033[0m"); 
-    // ROS_INFO_STREAM("\033[1;32m -- The number of static points in a scan: " << scan_static_local->points.size() << "\033[0m"); 
-    // ROS_INFO_STREAM("\033[1;32m -- The number of dynamic points in a scan: " << num_points_of_a_scan - scan_static_local->points.size() << "\033[0m"); 
-
-    // publishPointcloud2FromPCLptr(static_curr_scan_publisher_, scan_static_local);
-    // publishPointcloud2FromPCLptr(dynamic_curr_scan_publisher_, scan_dynamic_local);
-    // usleep( kPauseTimeForClearStaticScanVisualization );
-
     return std::pair<pcl::PointCloud<PointType>::Ptr, pcl::PointCloud<PointType>::Ptr> (scan_static_local, scan_dynamic_local);
 
 } // removeDynamicPointsOfScanByKnn
@@ -729,12 +693,12 @@ void Removerter::saveStaticScan( int _scan_idx, const pcl::PointCloud<PointType>
 } // saveStaticScan
 
 
-void Removerter::saveDynamicScan( int _scan_idx, const pcl::PointCloud<PointType>::Ptr& _ptcloud )
-{
-    std::string file_name_orig = sequence_valid_scan_names_.at(_scan_idx);
-    std::string file_name = scan_dynamic_save_dir_ + "/" + file_name_orig + ".pcd";
-    pcl::io::savePCDFileBinary(file_name, *_ptcloud);
-} // saveDynamicScan
+// void Removerter::saveDynamicScan( int _scan_idx, const pcl::PointCloud<PointType>::Ptr& _ptcloud )
+// {
+//     std::string file_name_orig = sequence_valid_scan_names_.at(_scan_idx);
+//     std::string file_name = scan_dynamic_save_dir_ + "/" + file_name_orig + ".pcd";
+//     pcl::io::savePCDFileBinary(file_name, *_ptcloud);
+// } // saveDynamicScan
 
 
 void Removerter::saveCleanedScans(void)
@@ -744,7 +708,7 @@ void Removerter::saveCleanedScans(void)
 
     for(std::size_t idx_scan=0; idx_scan < scans_static_.size(); idx_scan++) {  
         saveStaticScan(idx_scan, scans_static_.at(idx_scan));
-        saveDynamicScan(idx_scan, scans_dynamic_.at(idx_scan));
+        // saveDynamicScan(idx_scan, scans_dynamic_.at(idx_scan));
     }
 } // saveCleanedScans
 
@@ -805,6 +769,9 @@ void Removerter::scansideRemovalForEachScanAndSaveThem( void )
 } // scansideRemovalForEachScanAndSaveThem
 
 void Removerter::batchRemoval(void) {
+    if (end_idx_ <= 0) {
+        end_idx_ = sequence_scan_names_.size();
+    }
     // load valid scan info and pose
     ROS_INFO_STREAM("\033[1;32m start batch removal from " << start_idx_<< "th scan " << "to " << end_idx_ - 1 << "th scan" << "\033[0m");  
     ROS_INFO_STREAM("\033[1;32m batch size: "<< batch_size  <<"\033[0m");  

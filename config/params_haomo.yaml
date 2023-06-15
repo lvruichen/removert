@@ -4,10 +4,10 @@ removert:
   # @ save option 
   saveMapPCD: true
   saveCleanScansPCD: true
-  save_pcd_directory: "/home/eric/data/haomo/0511/" # replace to your path (please use an absolute path)
+  save_pcd_directory: "/home/eric/data/haomo/xmt_0613/point_lio/" # replace to your path (please use an absolute path)
 
-  sequence_scan_dir: "/home/eric/data/haomo/0511/keyframes/"
-  sequence_pose_path: "/home/eric/data/haomo/0511/update_pose.txt"
+  sequence_scan_dir: "/home/eric/data/haomo/xmt_0613/point_lio/keyframes/"
+  sequence_pose_path: "/home/eric/data/haomo/xmt_0613/loop/update_pose.txt"
 
   # sequence_scan_dir: "/home/eric/data/binhai/slam/velodyne/"
   # sequence_pose_path: "/home/eric/data/binhai/slam/pose.txt"  
@@ -20,21 +20,16 @@ removert:
                              0.0, 0.0, 1.0, 0.0, 
                              0.0, 0.0, 0.0, 1.0]
 
-
   # @ Sampling nodes 
   use_keyframe_gap: false 
   keyframe_gap: 5 
   start_idx: 0 # change this
-  end_idx: 1000 # change this
+  end_idx: -1 # change this(-1 means all valid scan)
 
   visualizationFlag: false
   
   use_batch_removal: true
-  clean_for_all_scan: false # default is false
   batch_size: 100
-  valid_ratio_to_save: 0.75 # i.e., no save cleaned scans located at the boundaries of a batch  
-
-
   # @ Range image resolution
   # the below is actually magnifier ratio (i.e., 5 means x5 resolution, the x1 means 1 deg x 1 deg per pixel)
   # - recommend to use the first removing resolution's magnifier ratio should meet the seonsor vertical fov / number of rays 
