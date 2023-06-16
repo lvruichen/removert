@@ -165,7 +165,6 @@ void Removerter::readValidScans( void )
         // cout for debug  
         cout_counter++;
     }
-    cout << endl;
 } // readValidScans
 
 
@@ -688,7 +687,7 @@ void Removerter::saveStaticScan( int _scan_idx, const pcl::PointCloud<PointType>
 {
 
     std::string file_name_orig = sequence_valid_scan_names_.at(_scan_idx);
-    std::string file_name = scan_static_save_dir_ + "/" + file_name_orig + ".pcd";
+    std::string file_name = scan_static_save_dir_ + "/" + file_name_orig;
     pcl::io::savePCDFileBinary(file_name, *_ptcloud);
 } // saveStaticScan
 
@@ -817,7 +816,6 @@ void Removerter::run( void )
     // load scan and poses
     parseValidScanInfo();
     readValidScans();
-
     // construct initial map using the scans and the corresponding poses 
     makeGlobalMap();
 
@@ -842,6 +840,15 @@ void Removerter::run( void )
     // visualization all results
     submap_static = global_static_map_result;
     submap_dynamic = global_dynamic_map_result;
+    // radius outlier filter
+    pcl::PointCloud<PointType>::Ptr submap_static_filtered(new pcl::PointCloud<PointType>());
+    pcl::RadiusOutlierRemoval<pcl::PointXYZI> outrem;
+    outrem.setInputCloud(submap_static);
+    outrem.setRadiusSearch(0.4);
+    outrem.setMinNeighborsInRadius(15);
+    outrem.filter(*submap_static_filtered);
+    submap_static = submap_static_filtered;
+
     // static clouds
     ROS_INFO_STREAM("\033[1;32m static submap size: " << submap_static->size() << "\033[0m"); 
     // dynamic clouds

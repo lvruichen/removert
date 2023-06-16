@@ -5,7 +5,7 @@
 - remove module remove all dynamic points belonging to a pixel, not just the nearset point.
 ## Drawback
 - to many ground points are mistakenly killed
-- the parameter is to0 many and have to suit for different dataset. 
+- the parameter is to many and have to suit for different dataset. 
 
 <p align="center"><img src="docs/res.png" width=900></p>
 

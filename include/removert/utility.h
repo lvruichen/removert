@@ -36,6 +36,7 @@
 #include <pcl/filters/filter.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/octree/octree_pointcloud_voxelcentroid.h>
+#include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/crop_box.h> 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/cloud_viewer.h>
