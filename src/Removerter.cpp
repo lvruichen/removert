@@ -961,17 +961,39 @@ void Removerter::run( void )
     // vis_res2.addPointCloud(dynamicSubmap, dynamic_handler, "dynamic");
     // vis_res2.spin();
 
+
+
     // calculate PP and PR
     std::vector<int> DYNAMIC_CLASSES = {252, 253, 254, 255, 256, 257, 258, 259};
-
-    int total_dynamic_points = 0;
+    int total_static_points      = 0;
+    int total_dynamic_points     = 0;
+    int preserved_static_points  = 0;
     int preserved_dynamic_points = 0;
-    int total_static_points = 0;
-    int preserved_static_points = 0;
+    // voxelization
+    pcl::PointCloud<PointType>::Ptr rawGlobalmapDS(new pcl::PointCloud<PointType>());
+    pcl::VoxelGrid<PointType> downSizeFilterGlobal;
+    downSizeFilterGlobal.setLeafSize(0.2, 0.2, 0.2);
+    downSizeFilterGlobal.setInputCloud(map_global_orig_);
+    downSizeFilterGlobal.filter(*rawGlobalmapDS);
+    cout << "raw global map downsample size: " << rawGlobalmapDS->size() << endl;
 
+    pcl::PointCloud<PointType>::Ptr filteredGlobalmapDS(new pcl::PointCloud<PointType>());
+    downSizeFilterGlobal.setInputCloud(global_static_map_result);
+    downSizeFilterGlobal.filter(*filteredGlobalmapDS);
+    
     pcl::PointCloud<PointType>::Ptr preservedDynamic(new pcl::PointCloud<PointType>());
     pcl::PointCloud<PointType>::Ptr wrongKillStatic(new pcl::PointCloud<PointType>());
-    for (auto& _p : staticSubmap->points) {
+    pcl::PointCloud<PointType>::Ptr rightStatic(new pcl::PointCloud<PointType>());
+    pcl::PointCloud<PointType>::Ptr rightDynamic(new pcl::PointCloud<PointType>());
+
+    pcl::KdTreeFLANN<PointType>::Ptr kdtree;
+    kdtree.reset(new pcl::KdTreeFLANN<PointType>());
+    kdtree->setInputCloud(filteredGlobalmapDS);
+    std::vector<int> pointSearchInd;
+    std::vector<float> pointSearchSqDis;
+
+    for (auto& _p : rawGlobalmapDS->points) {
+        kdtree->radiusSearch(_p, 0.15, pointSearchInd, pointSearchSqDis);
         uint32_t float2int      = static_cast<uint32_t>(_p.intensity);
         uint32_t semantic_label = float2int & 0xFFFF;
         uint32_t inst_label     = float2int >> 16;
@@ -980,43 +1002,33 @@ void Removerter::run( void )
             if (semantic_label == class_num) { 
                 is_static = false;
             }
-            // if (pointDistance(_p) < 2) {
-            //     is_static = false;
-            // }
         }
         if (is_static) {
             total_static_points++;
-            preserved_static_points++;
+            if (pointSearchInd.empty()) {
+                // wrong kill
+                wrongKillStatic->push_back(_p);
+                
+            }
+            else {
+                // right static
+                rightStatic->push_back(_p);
+                preserved_static_points++;
+            }
         }
         else {
             total_dynamic_points++;
-            preserved_dynamic_points++;
-            preservedDynamic->push_back(_p);
+            if (pointSearchInd.empty()) {
+                // right kill
+                rightDynamic->push_back(_p);
+            }
+            else {
+                // preserved dynamic
+                preservedDynamic->push_back(_p);
+                preserved_dynamic_points++;
+            }
         }
     } 
-
-    for (auto& _p : dynamicSubmap->points) {
-        uint32_t float2int      = static_cast<uint32_t>(_p.intensity);
-        uint32_t semantic_label = float2int & 0xFFFF;
-        uint32_t inst_label     = float2int >> 16;
-        bool     is_static      = true;
-        for (int class_num: DYNAMIC_CLASSES) {
-            if (semantic_label == class_num) { 
-                is_static = false;
-            }
-            // if (pointDistance(_p) < 0.5) {
-            //     is_static = false;
-            // }
-        }
-        if (is_static) {
-            total_static_points++;
-            wrongKillStatic->push_back(_p);
-        }
-        else {
-            total_dynamic_points++;
-        }
-    }
-
     cout << "total_static_points: " << total_static_points << endl;
     cout << "total_dynamic_points:" << total_dynamic_points << endl;
     cout << "preserved_static_points:" << preserved_static_points << endl;
@@ -1030,12 +1042,12 @@ void Removerter::run( void )
 
     // Green
     pcl::visualization::PCLVisualizer vis_res("vis_res");
-    pcl::visualization::PointCloudColorHandlerCustom<PointType> static_handler(staticSubmap, 0, 255, 0);
-    vis_res.addPointCloud(staticSubmap, static_handler, "static");
+    pcl::visualization::PointCloudColorHandlerCustom<PointType> static_handler(rightStatic, 0, 255, 0);
+    vis_res.addPointCloud(rightStatic, static_handler, "static");
 
     // White
-    pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(dynamicSubmap, 255, 255, 255);
-    vis_res.addPointCloud(dynamicSubmap, dynamic_handler, "dynamic");
+    pcl::visualization::PointCloudColorHandlerCustom<PointType> dynamic_handler(rightDynamic, 255, 255, 255);
+    vis_res.addPointCloud(rightDynamic, dynamic_handler, "dynamic");
 
     // Red
     pcl::visualization::PointCloudColorHandlerCustom<PointType> pd_handler(preservedDynamic, 255, 0, 0);
